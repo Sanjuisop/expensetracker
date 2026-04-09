@@ -1,40 +1,40 @@
 const express = require('express');
-const mongoose = require('mongoose');
+const { Pool } = require('pg');
 const cors = require('cors');
 
 const app = express();
+app.use(express.json());
+app.use(cors());
 
-// 1. Middleware (The "Rules")
-app.use(express.json()); // Allows the server to read JSON data
-app.use(cors());         // Allows your website to talk to this server
-
-// 2. Connect to the Database (The "Pantry")
-// We will get this URL from MongoDB Atlas or Render later
-const DB_URL = "your_mongodb_connection_string_here"; 
-
-mongoose.connect(DB_URL)
-  .then(() => console.log("Connected to Database!"))
-  .catch(err => console.log(err));
-
-// 3. Define what a "Transaction" looks like
-const TransactionSchema = new mongoose.Schema({
-  text: String,
-  amount: Number
+// 1. Connection to Render PostgreSQL
+// You get this "Internal Database URL" from the Render Dashboard
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false } // Required for Render
 });
-const Transaction = mongoose.model('Transaction', TransactionSchema);
 
-// 4. Routes (The "Orders")
-// Get all transactions
+// 2. Fetch all transactions
 app.get('/api/transactions', async (req, res) => {
-  const transactions = await Transaction.find();
-  res.json(transactions);
+  try {
+    const result = await pool.query('SELECT * FROM transactions');
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// Add a new transaction
+// 3. Add a transaction
 app.post('/api/transactions', async (req, res) => {
-  const newTransaction = new Transaction(req.body);
-  await newTransaction.save();
-  res.json(newTransaction);
+  const { text, amount } = req.body;
+  try {
+    const result = await pool.query(
+      'INSERT INTO transactions (text, amount) VALUES ($1, $2) RETURNING *',
+      [text, amount]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
