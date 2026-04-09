@@ -6,14 +6,30 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 1. Connection to Render PostgreSQL
-// You get this "Internal Database URL" from the Render Dashboard
+// 1. Connection to Postgres
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false } // Required for Render
+  ssl: { rejectUnauthorized: false }
 });
 
-// 2. Fetch all transactions
+// 2. Automatically create the table if it's missing
+const initDB = async () => {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS transactions (
+        id SERIAL PRIMARY KEY,
+        text VARCHAR(255) NOT NULL,
+        amount DECIMAL NOT NULL
+      );
+    `);
+    console.log("Database table is ready!");
+  } catch (err) {
+    console.error("Database init error:", err);
+  }
+};
+initDB();
+
+// 3. API Routes
 app.get('/api/transactions', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM transactions');
@@ -23,7 +39,6 @@ app.get('/api/transactions', async (req, res) => {
   }
 });
 
-// 3. Add a transaction
 app.post('/api/transactions', async (req, res) => {
   const { text, amount } = req.body;
   try {
@@ -37,5 +52,5 @@ app.post('/api/transactions', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000; // Render uses 10000 often
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
