@@ -7,7 +7,7 @@ const text = document.getElementById('text');
 const amount = document.getElementById('amount');
 
 // 1. YOUR BACKEND URL (The Bridge)
-const API_URL = 'https://expensetracker01-bmtu.onrender.com/api/transactions';
+const API_URL = 'https://expensetracker-backend-jpqw.onrender.com/api/transactions';
 
 // 2. Fetch transactions from the Backend
 async function getTransactions() {
